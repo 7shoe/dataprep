@@ -1,0 +1,11 @@
+# Ignore CSV files
+*.csv
+
+# Ignore specific directories
+code/statistical_tasks/tmp/
+code/crawling/mvp_bioarxiv/registry/
+
+code/statistical_tasks/tmp/
+code/crawling/mvp_bioarxiv/registry/
+
+# Other files to ignore
