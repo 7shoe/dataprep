@@ -35,14 +35,13 @@ def main():
     validate_subset(args.scores, valid_scores, "scores")
     validate_subset(args.models, valid_models, "models")
     
-    # Validate frame_name
-    frame_name = args.frame_name
-    
+    # validate frame_name
     parsers = args.parsers
     modes = args.modes
     scores = args.scores
     models = args.models
-
+    frame_name = args.frame_name
+    
     # constants
     tasks = ['reg', 'cls']
     p_store_reg = Path(f'./performance/{frame_name}_reg.csv')
@@ -54,14 +53,14 @@ def main():
         # get raw data frames
         df_train, df_test, df_val = load_data(parser=parser)
     
-        # DEBUG <- leave this in for a moment
-        #df_train = df_train.loc[:450, :]
+        # DEBUG <- leave this in for a moment to keep training fast
+        df_train = df_train.loc[:450, :]
     
         # subset
         for score in scores:
             for mode in modes:
                 # process data
-                data_list = process_data(df_train, df_test, df_val, n_max_chars=3200, max_features=1000, score=score, mode=mode, parsers=parsers)
+                data_list = process_data(df_train, df_test, df_val, n_max_chars=3200, max_features=1500, score=score, mode=mode, parsers=parsers)
                 (X_train, y_train), (X_val, y_val), (X_test, y_test) = data_list
                 
                 # - keep score list (for cls task to recoup BLEU regret)
@@ -83,19 +82,21 @@ def main():
                         info = {'mode': mode, 'model': model, 'score': score, 'parser': parser, 'task': task}
                         
                         try:
-                            if task == 'cls':
-                                # train
-                                trained_model = train_model(model, X_train, y_train_cls)
-                                # evaluate
-                                out = evaluate(trained_model, data_list_cls, y_score_list, info, parsers)
-                            else:
+                            #if task == 'cls':
+                            #    # train
+                            #    trained_model = train_model(model, X_train, y_train_cls)
+                            #    # evaluate
+                            #    out = evaluate(trained_model, data_list_cls, y_score_list, info, parsers)
+                            if task == 'reg':
                                 # train
                                 trained_model = train_model(model, X_train, y_train)
                                 # evaluate
                                 out = evaluate(trained_model, data_list, y_score_list, info, parsers)
+                            else:
+                                continue
                             
                             # append
-                            all_df_metrics.append(out)
+                            all_df_metrics.append({'metrics' : out, 'model' : model})
                             
                             # store or append results to CSV
                             p_store = p_store_reg if task=='reg' else p_store_cls

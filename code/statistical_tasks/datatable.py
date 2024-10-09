@@ -26,7 +26,7 @@ class TextScoreTable:
                  max_char:int=-1,
                  len_df_raw:int=284_470,
                  overwrite_flag:bool = False,
-                 root_dir:Path=Path('/lus/eagle/projects/argonne_tpc/siebenschuh/aurora_gpt/database/pagewise')) -> None:
+                 root_dir:Path=Path('/lus/eagle/projects/argonne_tpc/siebenschuh/aurora_gpt/database/')) -> None:
 
         # validate
         root_dir = Path(root_dir)
@@ -203,7 +203,7 @@ class TextScoreTable:
         result = {}
         # DEBUG
         #print('\n\nrow : ', row, '\n\n')
-        parsers = ['nougat', 'pymupdf', 'grobid', 'pypdf', 'marker']
+        parsers = ['pypdf'] #['nougat', 'pymupdf', 'grobid', 'pypdf', 'marker']
 
         # resilient parallelization requires try except
         try:

@@ -12,37 +12,50 @@ import diff_match_patch as dmp_module
 
 def assemble_pagewise_raw_parser_output(i:int,
                                         parsers:list[str]=['html','nougat', 'pymupdf', 'pypdf', 'marker', 'grobid'],
-                                        store_dir:Path=Path('/eagle/projects/argonne_tpc/siebenschuh/aurora_gpt/database/pagewise')):
+store_dir:Path=Path('/eagle/projects/argonne_tpc/siebenschuh/aurora_gpt/database/pagewise/sub_tables_raw_AFTER'),
+                                        p_pdf_root: Path = Path('/eagle/projects/argonne_tpc/siebenschuh/aurora_gpt/joint'),
+                                        save_flag:bool=True):
     """
-    Generates page-wise variant of `parser_output_raw.csv` of texts (path, html, ..., nougat)
+    Generates page-wise variant of `parser_output_AFTER_raw.csv` of texts (path, html, ..., nougat)
     - i: core (to identify chunk)
     """
 
-    assert i in {-1,0,1,2,3,4}, ""
+    assert i in {-1,0,1,2,3,4}, "Given 5 Sophia machines at a time. only index 0-4 valid or (-1) to process in full."
     store_dir = Path(store_dir)
+    p_pdf_root = Path(p_pdf_root)
     assert store_dir.is_dir(), f"Store_dir does not exist. Invalid path: {store_dir}"
+    assert p_pdf_root.is_dir(), f"Root directory for PDFs does not exist. Invalid path: {p_pdf_root}"
+    assert len(list(p_pdf_root.rglob("*.pdf")))>0, "Root dir for PDFs exist - but has no `.pdf` files in it`"
     
     # load PDF pagelist chunk (PyMuPDF)
-    dict_of_page_lists = get_list_of_pdf_page_lists(i=i) # DEBUG -> subset to 20 for testing
+    dict_of_page_lists = get_list_of_pdf_page_lists(i=i, p_pdf_root=p_pdf_root) # DEBUG -> subset to 20 for testing
     
     # assemble 
     data_list_dict = {}
     for parser in parsers:
-        data_list_dict[parser] = read_out_parser_output(paths=dict_of_page_lists.keys(), parser=parser)
+        data_list_dict[parser] = read_out_parser_output(paths=dict_of_page_lists.keys(), 
+                                                        parser=parser,
+                                                        root_dir=p_pdf_root)
     
     # loop PDF pagelists (for all parsers)
     # - assemble DataFrame [path|html|nougat|pymupdf|pypdf|marker|grobid] w/ path in the style of `arxiv/pdf/2207.11282v4.pdf`
     all_paths = get_unique_pdf_paths_from_data_list_dict(data_list_dict)
+    
     # - 
-    dict_of_page_lists = {end_of_path(k):v for k,v in dict_of_page_lists.items()}
+    dict_of_page_lists = {p_pdf_root / end_of_path(k):v for k,v in dict_of_page_lists.items()}
 
     # loop paths
     all_rows = []
+    
+    # all_paths
+    all_paths = [p_pdf_root / p for p in all_paths]
+
     for p in all_paths:
         # parser
         for parser in parsers:
             # PyMuPDF reference exists
             if p in dict_of_page_lists.keys():
+                
                 # load parser's full text
                 parser_fulltext = get_text_by_path(p, data_list_dict[parser])
     
@@ -55,7 +68,10 @@ def assemble_pagewise_raw_parser_output(i:int,
                 
                 # split
                 if len(parser_fulltext) > 0:
+                    # LEGACY
                     parsed_page_list = partition_fulltext_by_pagelist(parser_fulltext, page_list)
+                    # TODO: swap in new new_partition_fulltext_by_pagelist()
+                    # ...
                 else:
                     parsed_page_list = {k : '' for k in range(len(page_list))}
     
@@ -71,13 +87,15 @@ def assemble_pagewise_raw_parser_output(i:int,
                         row = {'path' : p, 'page' : page_idx, 'text' : page_text, 'parser' : parser}
                         # - append
                         all_rows.append(row)
+            # else
     # PyMUPDF
     df = assemble_dataframe(all_rows, i, store_dir)
     
     # store
-    df.to_csv(store_dir / f'pagewise_parser_output_raw_{i}_5.csv', sep='|', index=None)
+    if save_flag:
+        df.to_csv(store_dir / f'pagewise_parser_output_raw_AFTER_{i}_5.csv', sep='|', index=None)
 
-    pass
+    return df
 
 def get_unique_pdf_paths_from_data_list_dict(data_list_dict:dict) -> list[str]:
     """Extracts all all observed (short) paths from the data_list_dict
@@ -124,8 +142,6 @@ def filter_unique_paths(parser_data_list):
     # loop through the list of dictionaries
     for data in parser_data_list:
         if (data is not None) and (data['text'] is not None):
-            # DEBUG
-            #print('data.keys() : ', data.keys())
             # - - -
             path = data['path']
             text_length = len(data['text'])
@@ -146,8 +162,6 @@ def read_out_parser_output(parser:str,
     - paths[list[Path|str]] : list of pdf paths
     - root_dir[Path] : root directory where various parser outputs are stored (usually ../joint_to_{parser}
     """
-    # DEBUG
-    print(f'parser: {parser}')
     
     # - loop 
     root_dir = Path(root_dir)
@@ -160,7 +174,7 @@ def read_out_parser_output(parser:str,
 
     # - extract
     parser_paths = list(p_parser_root.rglob("*.jsonl"))
-    assert len(parser_paths) > 0, "Path `../parsed_pdfs` does exist. But does not contain any jsonl"
+    assert len(parser_paths) > 0, f"Path parser_paths=`{parser_paths}` does exist. But does not contain any jsonl!"
     
     # - read data
     parser_data_list = []
@@ -212,9 +226,12 @@ def get_text_by_path(pdf_abs_path, parser_data_list, debug:bool=False):
         # Handle case where ref_path is not found
         return None
 
-def partition_fulltext_by_pagelist(fulltext:str, 
-                                   page_list:list[str]):
+
+
+def partition_fulltext_by_pagelist(fulltext:str, page_list:list[str]):
     """
+    CURRENT VERSION: partition_fulltext_by_pagelist_SAFECOPY()
+    
     Splits singular fulltext string (from one parser) by page strings (from other parser).
     
     Combines fuzzy matching and speculative split (from text lengths)
@@ -233,6 +250,7 @@ def partition_fulltext_by_pagelist(fulltext:str,
     # infer approximate lengths for each page based on the length of s_list items
     approx_len_list = [len(s) for s in s_list]
 
+    
     # loop pages
     for i, s in enumerate(s_list):
         # get the initial guess for the page length
@@ -243,7 +261,7 @@ def partition_fulltext_by_pagelist(fulltext:str,
         best_split = S[current_position:guess_position]
         
         # adjust the split point dynamically based on matching the beginning of the page
-        match_start = best_split.find(s[:min(100, len(s))])  # first 100 chars for quick fuzzy match
+        match_start = best_split.find(s[:min(100, len(s))])  # first 100 (800 unaffect) chars for quick fuzzy match
         
         if match_start != -1:
             # Adjust current position based on the best match
@@ -272,11 +290,20 @@ def process_single_pdf(pdf_abs_path):
             for page_number in range(pdf_document.page_count):
                 page = pdf_document.load_page(page_number)
     
-                # Extract text as blocks from the current page
-                page_text = page.get_text("blocks")
+                # extraction modes: `text` or `blocks`
+                blocks_flag = False # `text` appears slightly better than `blocks`
+
+                # extract text as blocks from the current page
+                if blocks_flag:
+                    page_text = page.get_text("blocks")
+                else:
+                    page_text = page.get_text("text")
     
                 # Clean the page text
-                clean_page = "\n".join([b[4] for b in page_text if len(b[4]) > 30])
+                if blocks_flag:
+                    clean_page = "\n".join([b[4] for b in page_text if len(b[4]) > 30])
+                else:
+                    clean_page = page_text
     
                 # Append the text of the current page to the list
                 page_list.append(clean_page)
@@ -336,6 +363,8 @@ def get_list_of_pdf_page_lists(i: int,
         
         # subset to (1/n_max_core)-th of all available PDFs
         pdf_abs_paths = pdf_paths[i_start:i_end]
+    else:
+        pdf_abs_paths = pdf_paths
 
     # DEBUG
     #pdf_abs_paths = pdf_abs_paths[:100] # XXX

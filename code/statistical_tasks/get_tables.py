@@ -28,7 +28,7 @@ if __name__=='__main__':
     parser.add_argument('--chunk_size', type=int, default=-1, required=False, help='Max. number of rows processed.')
     parser.add_argument('--chunk_index', type=int, default=-1, required=False, help='Index of subframe to be processed.')
     parser.add_argument('--max_char', type=int, default=-1, required=False, help='Max. no. of chars kept in parser/groundtruth text')
-    parser.add_argument('--root_dir', type=str, default='/lus/eagle/projects/argonne_tpc/siebenschuh/aurora_gpt/database/pagewise', 
+    parser.add_argument('--root_dir', type=str, default='/lus/eagle/projects/argonne_tpc/siebenschuh/aurora_gpt/database', 
                         help='Directory from which data is sourced and stored into')
     args = parser.parse_args()
     

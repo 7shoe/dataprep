@@ -2,8 +2,7 @@ from pathlib import Path
 import pandas as pd
 import argparse
 
-from pagewise_utils import get_list_of_pdf_page_lists, read_out_parser_output, end_of_path, assemble_dataframe, assemble_pagewise_raw_parser_output
-from pagewise_utils import get_unique_pdf_paths_from_data_list_dict, get_text_by_path, partition_fulltext_by_pagelist
+from pagewise_utils import assemble_pagewise_raw_parser_output
 
 def main():
     """
@@ -24,7 +23,7 @@ def main():
     parser.add_argument('-p', '--parsers', nargs='+', default=['html', 'nougat', 'pymupdf', 'pypdf', 'marker', 'grobid'], 
         help="List of parsers to use for extraction. Default is ['html', 'nougat', 'pymupdf', 'pypdf', 'marker', 'grobid']."
     )
-    parser.add_argument('-s', '--store_dir', type=Path, default=Path('/eagle/projects/argonne_tpc/siebenschuh/aurora_gpt/database/pagewise'),
+    parser.add_argument('-s', '--store_dir', type=Path, default=Path('/eagle/projects/argonne_tpc/siebenschuh/aurora_gpt/database/pagewise/sub_tables_raw_AFTER'),
         help="Directory to store the output. Default is '/eagle/projects/argonne_tpc/siebenschuh/aurora_gpt/database/pagewise'.")
     
     # Parse the arguments

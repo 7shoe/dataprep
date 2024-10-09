@@ -15,7 +15,7 @@ class ConvertParserOutput:
     def __init__(self, 
                  jsonl_root:Path = Path('/eagle/projects/argonne_tpc/siebenschuh/aurora_gpt'),
                  store_path:Path=Path('./database'),
-                 parser_name_list:list[str] = ['nougat', 'html', 'marker', 'pymupdf', 'pypdf', 'grobid']):
+                 parser_name_list:list[str] = ['nougat', 'html', 'marker', 'pymupdf', 'pypdf', 'grobid', 'tesseract']):
 
         self.jsonl_root = jsonl_root
         self.store_path = Path(store_path)
@@ -55,8 +55,8 @@ class ConvertParserOutput:
 
     def create_text_database(self, 
                              file_name:str, 
-                             overwrite:bool=False,
-                             fill_na_with_empty_str:bool=False):
+                             overwrite:bool=True,
+                             fill_na_with_empty_str:bool=True):
         """
         Looks-up all jsonl files (across the list of parsers) to extract `path` and `text` and merge them into a DB
         """
@@ -125,6 +125,8 @@ class ConvertParserOutput:
         
         # setup DataFrame
         df = pd.DataFrame(index=sorted_index_list, columns=self.parser_name_list)
+
+        print("HERRE >>>> ")
         
         # Iterate over parser_name_list
         for parser_name in self.parser_name_list:
@@ -170,6 +172,9 @@ class ConvertParserOutput:
         # - filter out rows for which groundtruth `html` text is not NaN
         df_unique = df_unique[~df_unique['html'].isna()]
 
+        # print
+        print('Before unique')
+        
         # re-assign
         df = pd.DataFrame(df_unique)
 
@@ -178,6 +183,7 @@ class ConvertParserOutput:
             df[col] = df[col].apply(self.__remove_surrogates__)
         
         # store
+        print(f"STORE!!! {store_file_path}")
         df.to_csv(store_file_path, sep='|')
 
         pass

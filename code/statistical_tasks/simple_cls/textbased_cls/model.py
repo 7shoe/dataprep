@@ -16,20 +16,17 @@ def get_model_parameters(model:str):
     # remove task type suffix
     model = model.replace('_reg', '').replace('_cls','')
     assert model in {'ridge', 'lasso', 'svm', 'xgb', 'knn'}, "Model must be one of"
-
-    # seed scipy
-    np.random.seed(177)
     
     # define parameter grids for each model
     ridge_param_dist = {
-        'alpha': [0.1, 1.0, 10.0, 100.0, 1000.0]  # Adjust alpha values based on your data
+        'alpha': [0.001, 0.1, 1.0, 10.0, 50.0, 100.0, 1000.0, 10_000.0]  # Adjust alpha values based on your data
     }
     lasso_param_dist = {
         'alpha': [0.1, 1.0, 10.0, 100.0, 1000.0]
     }
     svm_param_dist = {
-        'C': uniform(0.1, 10), 
-        'epsilon': uniform(0.01, 1), 
+        'C': uniform(0.001, 1000),  
+        'epsilon': uniform(0.001, 1.0), 
         'kernel': ['linear', 'poly', 'rbf']
     }
     br_param_dist = {
@@ -50,10 +47,11 @@ def train_model(model:str,
                 X_train,
                 y_train,
                 n_iter:int=10,
-                cv:int=5,
-                n_estimators:int=50,
+                cv:int=10,
+                n_estimators:int=50, 
                 random_state:int=678):
     """
+    - n_estimators: xgb-only
     """
     assert model in {'ridge', 'lasso', 'svm', 'xgb', 'knn'}, "Only these models supported"
 

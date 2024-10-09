@@ -54,15 +54,26 @@ def goodput(y_gt, y_pred):
     """
     Goodput (1 if best was chosen 0 otherwise)
     """
+
+    # test
+    y_gt = y_gt.to_numpy()
+    
+    # DEBUG
+    #print('type(y_gt)  : ', type(y_gt))
+    #print('type(y_pred): ', type(y_pred))
+    #print('y_gt.shape  : ', y_gt.shape)
+    #print('y_pred.shape: ', y_pred.shape)
+    #print('(y_gt)  : ', (y_gt))
+    #print('(y_pred): ', (y_pred))
     
     # convert
     y_gt = np.array(y_gt)
     y_pred = np.array(y_pred)
     
     # compare choices
-    pred_choice = y_pred.argmax(axis=1)
-    act_score = y_gt[np.arange(len(y_gt)), pred_choice]
-    max_values = np.array(y_gt).max(axis=1)
+    #pred_choice = y_pred.argmax(axis=1)
+    #act_score = y_gt[np.arange(len(y_gt)), pred_choice]
+    #max_values = np.array(y_gt).max(axis=1)
     
     return float(np.mean(y_pred.argmax(axis=1) == y_gt.argmax(axis=1)))
 
@@ -104,23 +115,38 @@ def evaluate(trained_model, data_list:list[tuple], y_score_list:list[pd.DataFram
             rel_inv_reg = inverse_rel_regret(y_gt=y_gt, y_pred=y_pred)
             gp = goodput(y_gt, y_pred) # same as rel. number of correct picks
             # store
-            metrics = {'subset' : subset, 'r2' : r2_agg, 'rmse' : rmse_agg, 'rmae' : rmae_agg, 'rir' : rel_inv_reg, 'acc' : gp, **r2_dict, **rmse_dict, **rmae_dict}
+            metrics = {'subset' : subset, 
+                       'r2' : r2_agg, 
+                       'rmse' : rmse_agg, 
+                       'rmae' : rmae_agg, 
+                       'rir' : rel_inv_reg, 
+                       'acc' : gp, 
+                       **r2_dict, 
+                       **rmse_dict, 
+                       **rmae_dict}
             
         # classification
         else:
             # transform to cls-format
-            y_gt = np.array(y_gt).argmax(1).reshape(-1, 1)
-            y_train = np.array(y_train).argmax(1).reshape(-1, 1)
-            y_test = np.array(y_test).argmax(1).reshape(-1, 1)
-            y_val = np.array(y_val).argmax(1).reshape(-1, 1)
+            y_gt = np.array(y_gt).argmax(1).reshape(len(y_gt), -1)
+            y_train = np.array(y_train).argmax(1).reshape(len(y_train), -1)
+            y_test = np.array(y_test).argmax(1).reshape(len(y_test), -1)
+            y_val = np.array(y_val).argmax(1).reshape(len(y_val), -1)
             
             # classification scores
+            print("Before acc computation ...")
             accuracy = accuracy_score(y_gt, y_pred)
+            print("... after accuracy_score()")
+            
             precision = precision_score(y_gt, y_pred, average='macro', zero_division=1)
             recall = recall_score(y_gt, y_pred, average='macro', zero_division=1)
             f1 = f1_score(y_gt, y_pred, average='macro', zero_division=1)
+            
             # store
-            metrics = {'subset' : subset, 'acc' : accuracy, 'prec' : precision, 'rec' : recall, 
+            metrics = {'subset' : subset, 
+                       'acc' : accuracy, 
+                       'prec' : precision, 
+                       'rec' : recall, 
                        'rir' : inverse_rel_regret_from_cls(y_gt_cls=y_gt, y_pred_cls=y_pred, y_gt_score=y_score)}
         
         # include meta information (data,model)
